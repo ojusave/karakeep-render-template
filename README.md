@@ -1,150 +1,162 @@
+<div align="center">
+
 # Karakeep on Render
 
-> Self-hosted bookmark-everything app: official Karakeep AIO image, Meilisearch full-text search, and headless Chrome for crawling.
+Deploy **Karakeep**, the self-hosted bookmark and read-it-later app, on Render with the official GHCR AIO image, Meilisearch, and headless Chrome.
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy-template/api/github/start?template_repo=karakeep-render-template)
+<p>
+  <a href="https://render.com/deploy-template/api/github/start?template_repo=karakeep-render-template">
+    <img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" />
+  </a>
+</p>
 
-**Template repository:** [render-examples/karakeep-render-template](https://github.com/render-examples/karakeep-render-template)
+<p>
+  <a href="https://render.com">
+    <img src="https://img.shields.io/badge/Render-Web%20%2B%20Private%20services-46e3b7?logo=render&logoColor=white" alt="Render" />
+  </a>
+  <a href="https://github.com/karakeep-app/karakeep">
+    <img src="https://img.shields.io/badge/Upstream-Karakeep-111111?logo=github&logoColor=white" alt="Karakeep" />
+  </a>
+  <a href="https://github.com/karakeep-app/karakeep/pkgs/container/karakeep">
+    <img src="https://img.shields.io/badge/Image-GHCR%20AIO-2496ED?logo=docker&logoColor=white" alt="GHCR image" />
+  </a>
+</p>
 
-Deploy [Karakeep](https://github.com/karakeep-app/karakeep) on Render without building the Turborepo monorepo. This template uses the official `ghcr.io/karakeep-app/karakeep` image, wires Meilisearch and headless Chrome on Render's private network, and generates auth secrets for you.
+</div>
 
-![Karakeep on Render](./assets/hero.png)
+![Karakeep](./assets/hero.png)
 
-**At a glance:** ~$24–28/mo (Oregon, Starter plans) · first deploy ~5–10 min · **Starter** web plan · no LLM keys at Apply time
+## What This Template Shows
 
----
+This repo is a thin Render packaging of Karakeep's official AIO image plus Meilisearch and Chrome sidecars. Small Dockerfiles adapt entrypoint / Chrome flags only; no monorepo build.
 
-## Deploy
+| Piece | Role |
+| --- | --- |
+| **[Karakeep](https://github.com/karakeep-app/karakeep)** | Bookmarks, archives, search, AI tagging |
+| **[ghcr.io/karakeep-app/karakeep](https://github.com/karakeep-app/karakeep/pkgs/container/karakeep)** | Official AIO image (via thin Dockerfile) |
+| **[Meilisearch](https://www.meilisearch.com/)** | Full-text search (`getmeili/meilisearch`) |
+| **Chrome** | Headless crawler / screenshots (`alpine-chrome`) |
+| **[Render Disk](https://render.com/docs/disks)** | SQLite + data at `/data`; Meili data at `/meili_data` |
 
-1. Click **[Deploy to Render](https://render.com/deploy-template/api/github/start?template_repo=karakeep-render-template)** and fork into your GitHub account.
-2. On Apply, confirm `karakeep`, `meilisearch`, `chrome`, and both disks. Leave `OPENAI_API_KEY` empty.
-3. Wait for **Live** (~5–10 min).
-4. Open the **`karakeep`** web service URL and create your account.
-5. Optional: set `OPENAI_API_KEY` on the **`karakeep`** service for AI tagging and summarization.
-
-```bash
-curl -sS https://<your-service>.onrender.com/api/health
-# {"status":"ok"}
-```
-
-Docs: [docs.karakeep.app](https://docs.karakeep.app)
-
----
-
-## What's included
+## Architecture
 
 ```mermaid
 flowchart LR
-  user["Browser / extensions"] --> web["karakeep"]
-  web --> meili[("Meilisearch")]
-  web --> disk[/"5 GB disk"/]
-  web --> chrome["headless Chrome"]
+  browser["Browser"] --> web["karakeep<br/>AIO image"]
+  web --> meili["meilisearch"]
+  web --> chrome["chrome"]
+  web --> disk[("/data")]
+  meili --> mdisk[("/meili_data")]
 ```
 
-| Resource | Plan | Role |
-|----------|------|------|
-| `karakeep` | Starter | Official AIO image + workers, SQLite on disk at `/data` |
-| `meilisearch` | Starter | Full-text search (`getmeili/meilisearch`) |
-| `chrome` | Starter | Crawling, screenshots, JS execution |
-| `karakeep-data` | 5 GB disk | Bookmarks, assets, SQLite |
-| `meilisearch-data` | 1 GB disk | Search index |
+### How It Works
 
-Default region: **oregon** (change in [`render.yaml`](./render.yaml)).
+1. Click **Deploy to Render**. Render forks this template and applies [`render.yaml`](./render.yaml).
+2. Render builds thin Docker wrappers (AIO + Chrome) and pulls Meilisearch.
+3. Open the `karakeep` URL and create an account.
+4. Optionally add `OPENAI_API_KEY` in the Dashboard for AI tagging.
+5. Save bookmarks; search and archives use Meilisearch + Chrome over the private network.
 
-**Use it for:** read-it-later · link archiving · AI-tagged bookmarks · team lists · RSS hoarding
+| Resource | Type | Plan | Notes |
+| --- | --- | --- | --- |
+| `karakeep` | Web (`runtime: docker`) | **starter** | AIO image; health `/api/health`; 5 GB disk |
+| `meilisearch` | Private (`runtime: image`) | **starter** | 1 GB disk |
+| `chrome` | Private (`runtime: docker`) | **starter** | Remote debugging on `9222` |
 
----
+Default region: **oregon**. Previews are off. LLM keys are not required at Apply time.
 
-## Environment variables
+## Quick Start
 
-**At Apply:** no secrets required.
+### Prerequisites
 
-**Auto-generated (do not rotate casually):**
+- A [Render account](https://dashboard.render.com/register?utm_source=github&utm_medium=referral&utm_campaign=ojus_demos&utm_content=readme_link)
+- Optional: OpenAI API key for AI tagging
 
-| Variable | Purpose |
-|----------|---------|
-| `NEXTAUTH_SECRET` | Session signing |
-| `MEILI_MASTER_KEY` | Shared Meilisearch auth (karakeep + meilisearch) |
+### Deploy
 
-**Wired for you:** `NEXTAUTH_URL`, `MEILI_ADDR`, `BROWSER_WEB_URL` (via private DNS host), `DATA_DIR`.
+1. Click **Deploy to Render** above and fork into your GitHub account.
+2. On Apply, leave `OPENAI_API_KEY` blank unless you want AI tagging immediately.
+3. Wait until services are **Live** (~5–10 minutes).
+4. Open the `karakeep` URL and finish signup.
+5. Add bookmarks; optionally set `OPENAI_API_KEY` later in the Dashboard.
 
-<details>
-<summary>Blueprint defaults and optional overrides</summary>
+Health check:
 
-Set in [`render.yaml`](./render.yaml):
+```bash
+curl -sS https://<your-karakeep>.onrender.com/api/health
+```
 
-| Variable | Value |
-|----------|-------|
-| `DATA_DIR` | `/data` |
-| `MEILI_ADDR` | `http://meilisearch:7700` |
-| `DB_WAL_MODE` | `true` |
+## Features
 
-Optional after deploy: `OPENAI_API_KEY`, `OLLAMA_BASE_URL`, and others listed in [.env.example](./.env.example) and [Karakeep env docs](https://docs.karakeep.app/configuration/environment-variables).
+| Feature | Description |
+| --- | --- |
+| **Official AIO image** | Thin wrapper around GHCR Karakeep |
+| **Search + crawl** | Meilisearch + headless Chrome private services |
+| **Persistent SQLite** | 5 GB disk at `/data` |
+| **Generated secrets** | `NEXTAUTH_SECRET`, `MEILI_MASTER_KEY` |
+| **Optional AI** | `OPENAI_API_KEY` after deploy |
 
-</details>
+## Configuration
 
----
+| Variable | Source | Description |
+| --- | --- | --- |
+| `MEILI_MASTER_KEY` | Auto-generated (group) | Shared Meilisearch key |
+| `NEXTAUTH_SECRET` | Auto-generated | Auth sessions |
+| `NEXTAUTH_URL` | Wired | From `karakeep` public URL |
+| `DATA_DIR` | Wired | `/data` |
+| `MEILI_HOST` / `MEILI_PORT` | Wired | Meilisearch private host + `7700` (entrypoint builds `MEILI_ADDR`) |
+| `BROWSER_WEB_HOST` / `BROWSER_WEB_PORT` | Wired | Chrome private host + `9222` (entrypoint builds `BROWSER_WEB_URL`) |
+| `DB_WAL_MODE` | Wired | `true` |
+| `MEILI_NO_ANALYTICS` | Wired | `true` on Meilisearch |
+| `OPENAI_API_KEY` | Optional (`sync: false`) | AI tagging; leave blank at Apply |
 
 ## Cost
 
-| Resource | ~USD/mo |
-|----------|--------:|
-| `karakeep` (Starter) | 7 |
-| `meilisearch` (Starter) | 7 |
-| `chrome` (Starter) | 7 |
-| 6 GB disks (5 + 1) | ~3 |
-| **Total** | **~24–28** |
+| Resource | Approx. monthly |
+| --- | ---: |
+| `karakeep` (Starter) | ~$7 |
+| `meilisearch` (Starter) | ~$7 |
+| `chrome` (Starter) | ~$7 |
+| Disks (6 GB total) | ~$1.50 |
+| **Total** | **~$24–28** |
 
-LLM usage is separate. Upgrade `karakeep` to **Standard** if you OOM on large imports or heavy crawling.
-
----
-
-## Customize
-
-- **Pin Karakeep version:** change the `FROM` tag in [`docker/Dockerfile.render-karakeep`](./docker/Dockerfile.render-karakeep), push, Sync Blueprint.
-- **Custom domain:** add on the `karakeep` web service in the Dashboard (TLS automatic).
-- **Disable signups:** set `DISABLE_SIGNUPS=true` on `karakeep` after creating your account.
-
-**Ops:** Disk snapshots via Render. Logs: Dashboard → **karakeep** → **Logs**, or `render logs -r <id> --tail`. Disk = single instance only on the web service.
-
----
+Bump `karakeep` to **Standard** if you OOM on large imports or heavy crawling.
 
 ## Troubleshooting
 
-| Problem | Fix |
-|---------|-----|
-| Chrome pserv exit 128 | Do not use `dockerCommand` on `runtime: image`. This template builds chrome from [`Dockerfile.render-chrome`](./docker/Dockerfile.render-chrome). |
-| Crawling fails / no screenshots | Confirm `chrome` pserv is **Live**. Check `BROWSER_WEB_HOST` is set (entrypoint builds `BROWSER_WEB_URL`). |
-| Search disabled | `MEILI_MASTER_KEY` must match on `karakeep` and `meilisearch` (shared env group handles this). |
-| Login loops | Confirm `NEXTAUTH_URL` matches your public web URL (wired from `RENDER_EXTERNAL_URL`). |
+| Problem | Solution |
+| --- | --- |
+| Health check fails / no open ports | Keep Starter+; check disk mount at `/data` and logs for Meili connectivity. |
+| Search empty / crawl fails | Confirm `meilisearch` and `chrome` are Live; `BROWSER_WEB_HOST` wiring. |
+| AI tagging missing | Set `OPENAI_API_KEY` in Dashboard → Environment. |
+| Data lost after redeploy | Disks must remain attached (`/data`, `/meili_data`). |
 
-More issues: [GitHub issues](https://github.com/render-examples/karakeep-render-template/issues) · upstream [Karakeep](https://github.com/karakeep-app/karakeep/issues)
+## Project Structure
 
----
+```
+render.yaml                 Render Blueprint
+README.md                   This file
+LICENSE                     MIT (template wrapper)
+.env.example                Optional notes
+assets/                     Hero
+docker/Dockerfile.render-*  Thin image wrappers
+docker/render-entrypoint.sh Builds BROWSER_WEB_URL from Render host
+```
 
-## FAQ
+## Learn More
 
-**LLM keys at deploy?** No. Add `OPENAI_API_KEY` after sign-in if you want AI tagging.
+**Render:**
+- [Web Services](https://render.com/docs/web-services)
+- [Private Services](https://render.com/docs/private-services)
+- [Disks](https://render.com/docs/disks)
+- [Blueprints](https://render.com/docs/infrastructure-as-code)
 
-**Fork manually?** No. One-click creates your fork.
+**Karakeep:**
+- [Upstream repo](https://github.com/karakeep-app/karakeep)
+- [GHCR package](https://github.com/karakeep-app/karakeep/pkgs/container/karakeep)
 
-**Free tier?** Starter paid plans required for web + two private services + disks.
+## License
 
-**Same as Docker Compose?** Same three services; Render uses private DNS slugs instead of compose service names.
+[MIT](LICENSE) for this template wrapper.
 
----
-
-## Limits
-
-- **Disk on web service** limits `karakeep` to one instance (no autoscaling)
-- **Starter plan** may OOM on very large libraries; bump to Standard if needed
-- **No bundled Ollama** in this template (add your own service if needed)
-- **Same region** for all three services and disks
-
----
-
-## Security & license
-
-TLS at Render's edge. Protect `NEXTAUTH_SECRET` and `MEILI_MASTER_KEY`. Report upstream vulns to [karakeep-app/karakeep](https://github.com/karakeep-app/karakeep/security).
-
-- **Karakeep:** [AGPL-3.0](https://github.com/karakeep-app/karakeep/blob/main/LICENSE)
+Upstream [Karakeep](https://github.com/karakeep-app/karakeep) license: see upstream repo. Star that project if this helped.

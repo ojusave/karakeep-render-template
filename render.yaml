@@ -1,14 +1,12 @@
 # yaml-language-server: $schema=https://render.com/schema/render.yaml.json
 #
-# Karakeep on Render — one-click template
+# Karakeep on Render: one-click gallery template
 # Repo: https://github.com/render-examples/karakeep-render-template
 # Upstream: https://github.com/karakeep-app/karakeep
 # Image: https://github.com/karakeep-app/karakeep/pkgs/container/karakeep
 #
-# Pattern: image-wrapper (official GHCR AIO image) + Meilisearch + headless Chrome.
-# Mirrors upstream docker/docker-compose.yml on Render private networking.
-#
-# LLM keys are NOT required at Apply time. Add OPENAI_API_KEY after deploy for AI tagging.
+# Pattern: thin wrappers around official GHCR AIO image + Meilisearch + Chrome.
+# Dockerfiles only adapt entrypoint / Chrome flags; no app source build.
 
 previews:
   generation: off
@@ -27,10 +25,12 @@ projects:
           - type: web
             name: karakeep
             runtime: docker
+            plan: starter
             region: oregon
             dockerfilePath: ./docker/Dockerfile.render-karakeep
             dockerContext: .
             healthCheckPath: /api/health
+            autoDeployTrigger: off
             disk:
               name: karakeep-data
               mountPath: /data
@@ -39,8 +39,13 @@ projects:
               - fromGroup: karakeep-shared
               - key: DATA_DIR
                 value: /data
-              - key: MEILI_ADDR
-                value: http://meilisearch:7700
+              - key: MEILI_HOST
+                fromService:
+                  name: meilisearch
+                  type: pserv
+                  property: host
+              - key: MEILI_PORT
+                value: "7700"
               - key: BROWSER_WEB_HOST
                 fromService:
                   name: chrome
@@ -63,6 +68,7 @@ projects:
           - type: pserv
             name: meilisearch
             runtime: image
+            plan: starter
             region: oregon
             image:
               url: getmeili/meilisearch
@@ -78,6 +84,8 @@ projects:
           - type: pserv
             name: chrome
             runtime: docker
+            plan: starter
             region: oregon
             dockerfilePath: ./docker/Dockerfile.render-chrome
             dockerContext: .
+            autoDeployTrigger: off
